@@ -19,22 +19,20 @@ const io = new Server(server, {
 const rooms = {};
 
 io.on('connection', (socket) => {
-  console.log('Connect');
+  console.log(`Socket ${socket.id} connected`);
   let traffic;
   let api;
 
   socket.on('join', ({ host, mikrotikInterface }) => {
-
-    const room = `${host}_${mikrotikInterface}`
-    console.log(`Host: ${host}, Interface: ${mikrotikInterface}`);
+    
 
     // Crear una sala si no existe
-    if (!rooms[room]) {
-      rooms[room] = new Set();
+    if (!rooms[socket.id]) {
+      rooms[socket.id] = new Set();
     }
 
     // Agregar el cliente a la sala correspondiente
-    rooms[room].add(socket);
+    rooms[socket.id].add(socket);
 
     api = new RouterOSClient({
       host: host,
@@ -56,8 +54,8 @@ io.on('connection', (socket) => {
 
         if (data && data.length > 0) {
           const { rxBitsPerSecond: rx, txBitsPerSecond: tx } = data[0];
-          if (rooms[room] && typeof rooms[room].forEach === 'function') {
-            rooms[room].forEach(clientSocket => {
+          if (rooms[socket.id] && typeof rooms[socket.id].forEach === 'function') {
+            rooms[socket.id].forEach(clientSocket => {
               clientSocket.emit('traffic', { rx: rx / 1000000, tx: tx / 1000000 });
             });
           }
@@ -77,9 +75,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log('Disconnect');
+    console.log(`Socket ${socket.id} disconnect`);
 
-    // Cerrar el streaming de tráfico y desconectar el cliente de la sala correspondiente
     if (traffic) {
       traffic.close();
     }
