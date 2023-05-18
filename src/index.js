@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { RouterOSClient } from 'routeros-client';
 import * as dotenv from 'dotenv'
+import { formatSize } from './utils.js';
 
 dotenv.config()
 
@@ -24,8 +25,8 @@ io.on('connection', (socket) => {
   let api;
 
   socket.on('join', ({ host, mikrotikInterface }) => {
-    
 
+    console.log(host, mikrotikInterface)
     // Crear una sala si no existe
     if (!rooms[socket.id]) {
       rooms[socket.id] = new Set();
@@ -40,7 +41,7 @@ io.on('connection', (socket) => {
       password: process.env.MIKROTIK_API_PASSWORD
     });
 
-    console.log(rooms);
+
     api.connect().then((client) => {
       const monitorTraffic = client.menu("/interface monitor-traffic");
       traffic = monitorTraffic.where({
@@ -56,7 +57,7 @@ io.on('connection', (socket) => {
           const { rxBitsPerSecond: rx, txBitsPerSecond: tx } = data[0];
           if (rooms[socket.id] && typeof rooms[socket.id].forEach === 'function') {
             rooms[socket.id].forEach(clientSocket => {
-              clientSocket.emit('traffic', { rx: rx / 1000000, tx: tx / 1000000 });
+              clientSocket.emit('traffic', { rx: formatSize(rx), tx: formatSize(tx) });
             });
           }
         } else {
